@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator GIF z napisów</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+  input, select, button { margin: 5px 0; padding: 5px; }
+  canvas { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Generator GIF z napisów</h1>
+
+<label>Plik SRT: <input type="file" id="srtFile" accept=".srt"></label><br>
+<label>Czcionka: <input type="text" id="font" value="Arial"></label><br>
+<label>Rozmiar czcionki (px): <input type="number" id="fontSize" value="32"></label><br>
+<label>Kolor czcionki: <input type="color" id="color" value="#000000"></label><br>
+<label>Tło: <input type="color" id="bgColor" value="#ffffff"></label><br>
+<button id="generate">Generuj GIF</button>
+
+<canvas id="canvas"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+
+<script>
+document.getElementById('generate').addEventListener('click', () => {
+    const fileInput = document.getElementById('srtFile');
+    if (!fileInput.files[0]) return alert('Wybierz plik SRT!');
+    
+    const font = document.getElementById('font').value;
+    const fontSize = parseInt(document.getElementById('fontSize').value);
+    const color = document.getElementById('color').value;
+    const bgColor = document.getElementById('bgColor').value;
+    
+    const reader = new FileReader();
+    reader.onload = e => {
+        const srtText = e.target.result;
+        const subtitles = parseSRT(srtText);
+        generateGIF(subtitles, font, fontSize, color, bgColor);
+    };
+    reader.readAsText(fileInput.files[0]);
+});
+
+function parseSRT(data) {
+    const regex = /(\d+)\s+(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\s+([\s\S]*?)(?=\n\n|\n*$)/g;
+    const subtitles = [];
+    let match;
+    while ((match = regex.exec(data)) !== null) {
+        subtitles.push({
+            start: timeToMs(match[2]),
+            end: timeToMs(match[3]),
+            text: match[4].replace(/\r/g,'').replace(/\n/g,' ')
+        });
+    }
+    return subtitles;
+}
+
+function timeToMs(time) {
+    const [h,m,sms] = time.split(':');
+    const [s, ms] = sms.split(',');
+    return parseInt(h)*3600000 + parseInt(m)*60000 + parseInt(s)*1000 + parseInt(ms);
+}
+
+function generateGIF(subtitles, font, fontSize, color, bgColor) {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 500;
+    canvas.height = 100;
+
+    const gif = new GIF({
+        workers: 2,
+        quality: 10
+    });
+
+    subtitles.forEach(sub => {
+        const duration = sub.end - sub.start;
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = color;
+        ctx.font = fontSize + 'px ' + font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sub.text, canvas.width/2, canvas.height/2);
+        gif.addFrame(ctx, {copy: true, delay: duration});
+    });
+
+    gif.on('finished', blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'subtitles.gif';
+        a.click();
+    });
+
+    gif.render();
+}
+</script>
+
+</body>
+</html>
