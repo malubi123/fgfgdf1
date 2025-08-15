@@ -1,72 +1,46 @@
-<script src="https://cdn.jsdelivr.net/npm/gif.js/dist/gif.js"></script>
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>GIF z napisów</title>
+</head>
+<body>
 
+<input type="file" id="srtFile" accept=".srt"><br>
+<button id="generate">Generuj GIF</button>
+<br>
+<img id="result">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.3.2/gifshot.min.js"></script>
 <script>
 document.getElementById('generate').addEventListener('click', () => {
     const fileInput = document.getElementById('srtFile');
     if (!fileInput.files[0]) return alert('Wybierz plik SRT!');
-    
-    const font = document.getElementById('font').value;
-    const fontSize = parseInt(document.getElementById('fontSize').value);
-    const color = document.getElementById('color').value;
-    const bgColor = document.getElementById('bgColor').value;
-    
+
     const reader = new FileReader();
     reader.onload = e => {
-        const srtText = e.target.result;
-        const subtitles = parseSRT(srtText);
-        generateGIF(subtitles, font, fontSize, color, bgColor);
+        const subtitles = e.target.result.split('\n').filter(l => l.trim() && !l.match(/^\d+$|-->/));
+        // prosta metoda: każdy wiersz jako osobna klatka
+        gifshot.createGIF({
+            'text': subtitles.join('\n'),
+            'fontSize': '32px',
+            'fontFamily': 'Arial',
+            'textColor': '#000000',
+            'backgroundColor': '#ffffff',
+            'interval': 1,
+            'gifWidth': 500,
+            'gifHeight': 100
+        }, function(obj) {
+            if (!obj.error) {
+                document.getElementById('result').src = obj.image;
+            } else {
+                alert('Błąd przy generowaniu GIFa');
+            }
+        });
     };
     reader.readAsText(fileInput.files[0]);
 });
-
-function parseSRT(data) {
-    const regex = /(\d+)\s+(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\s+([\s\S]*?)(?=\n\n|\n*$)/g;
-    const subtitles = [];
-    let match;
-    while ((match = regex.exec(data)) !== null) {
-        subtitles.push({
-            start: timeToMs(match[2]),
-            end: timeToMs(match[3]),
-            text: match[4].replace(/\r/g,'').replace(/\n/g,' ')
-        });
-    }
-    return subtitles;
-}
-
-function timeToMs(time) {
-    const [h,m,sms] = time.split(':');
-    const [s, ms] = sms.split(',');
-    return parseInt(h)*3600000 + parseInt(m)*60000 + parseInt(s)*1000 + parseInt(ms);
-}
-
-function generateGIF(subtitles, font, fontSize, color, bgColor) {
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 500;
-    canvas.height = 100;
-
-    const gif = new GIF({ workers: 1, quality: 10 });
-
-    subtitles.forEach(sub => {
-        const duration = sub.end - sub.start;
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = color;
-        ctx.font = fontSize + 'px ' + font;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(sub.text, canvas.width/2, canvas.height/2);
-        gif.addFrame(ctx, {copy: true, delay: duration});
-    });
-
-    gif.on('finished', blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'subtitles.gif';
-        a.click();
-    });
-
-    gif.render();
-}
 </script>
+
+</body>
+</html>
