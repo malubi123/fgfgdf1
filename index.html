@@ -1,29 +1,4 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generator GIF z napisów</title>
-<style>
-  body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
-  input, select, button { margin: 5px 0; padding: 5px; }
-  canvas { display: none; }
-</style>
-</head>
-<body>
-
-<h1>Generator GIF z napisów</h1>
-
-<label>Plik SRT: <input type="file" id="srtFile" accept=".srt"></label><br>
-<label>Czcionka: <input type="text" id="font" value="Arial"></label><br>
-<label>Rozmiar czcionki (px): <input type="number" id="fontSize" value="32"></label><br>
-<label>Kolor czcionki: <input type="color" id="color" value="#000000"></label><br>
-<label>Tło: <input type="color" id="bgColor" value="#ffffff"></label><br>
-<button id="generate">Generuj GIF</button>
-
-<canvas id="canvas"></canvas>
-
-<script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gif.js/dist/gif.js"></script>
 
 <script>
 document.getElementById('generate').addEventListener('click', () => {
@@ -70,10 +45,7 @@ function generateGIF(subtitles, font, fontSize, color, bgColor) {
     canvas.width = 500;
     canvas.height = 100;
 
-    const gif = new GIF({
-        workers: 2,
-        quality: 10
-    });
+    const gif = new GIF({ workers: 1, quality: 10 });
 
     subtitles.forEach(sub => {
         const duration = sub.end - sub.start;
@@ -98,6 +70,3 @@ function generateGIF(subtitles, font, fontSize, color, bgColor) {
     gif.render();
 }
 </script>
-
-</body>
-</html>
