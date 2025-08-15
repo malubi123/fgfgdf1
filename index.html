@@ -2,8 +2,8 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>GIF z napisów</title>
-<script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+<title>GIF z napisów - GitHub Pages (timing)</title>
+<script src="https://cdn.jsdelivr.net/npm/gifshot@0.3.2/build/gifshot.min.js"></script>
 <style>
 body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
 input, button { margin: 5px 0; padding: 5px; }
@@ -12,7 +12,7 @@ img { margin-top: 20px; border: 1px solid #ccc; }
 </head>
 <body>
 
-<h1>Generator GIF z napisów</h1>
+<h1>Generator GIF z napisów (GitHub Pages) – zsynchronizowany czas</h1>
 
 <label>Plik SRT: <input type="file" id="srtFile" accept=".srt"></label><br>
 <label>Czcionka: <input type="text" id="font" value="Arial"></label><br>
@@ -62,31 +62,46 @@ function timeToMs(time) {
 }
 
 function createGIF(subtitles, font, fontSize, color, bgColor) {
-    const gif = new GIF({ workers: 1, quality: 10 }); // main-thread
+    const frameInterval = 100; // każda klatka 100 ms
+    const totalTime = subtitles[subtitles.length-1].end;
+    const frames = [];
 
-    subtitles.forEach(sub => {
+    // Tworzenie tablicy napisów dla każdej klatki
+    for (let t = 0; t <= totalTime; t += frameInterval) {
+        const activeSubs = subtitles
+            .filter(s => t >= s.start && t <= s.end)
+            .map(s => s.text)
+            .join(' ');
+        frames.push({ text: activeSubs, duration: frameInterval });
+    }
+
+    const images = frames.map(frame => {
         const canvas = document.createElement('canvas');
         canvas.width = 500;
         canvas.height = 100;
         const ctx = canvas.getContext('2d');
-
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         ctx.fillStyle = color;
         ctx.font = fontSize + 'px ' + font;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(sub.text, canvas.width/2, canvas.height/2);
-
-        gif.addFrame(canvas, { delay: Math.max(sub.end - sub.start, 200) });
+        ctx.fillText(frame.text, canvas.width/2, canvas.height/2);
+        return canvas.toDataURL();
     });
 
-    gif.on('finished', function(blob) {
-        document.getElementById('result').src = URL.createObjectURL(blob);
+    gifshot.createGIF({
+        images: images,
+        gifWidth: 500,
+        gifHeight: 100,
+        interval: frameInterval/1000, // sekundowe przybliżenie
+    }, obj => {
+        if (!obj.error) {
+            document.getElementById('result').src = obj.image;
+        } else {
+            alert('Błąd przy generowaniu GIF.');
+        }
     });
-
-    gif.render();
 }
 </script>
 
